@@ -1,10 +1,15 @@
 package com.rebirthlee.streamcam
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.SurfaceHolder
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.pedro.rtplibrary.rtmp.RtmpCamera2
 import kotlinx.android.synthetic.main.activity_main.*
 import net.ossrs.rtmp.ConnectCheckerRtmp
@@ -13,7 +18,8 @@ import net.ossrs.rtmp.ConnectCheckerRtmp
 private val tag = MainActivity::class.java.simpleName
 
 class MainActivity : AppCompatActivity(), ConnectCheckerRtmp, SurfaceHolder.Callback {
-
+    private val REQUEST_CODE_PERMISSIONS = 10
+    private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
     private lateinit var rtmpCamera2: RtmpCamera2
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +38,33 @@ class MainActivity : AppCompatActivity(), ConnectCheckerRtmp, SurfaceHolder.Call
             }
         }
 
+        if (!allPermissionsGranted()) {
+            ActivityCompat.requestPermissions(
+                this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
+        }
+
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        if (requestCode == REQUEST_CODE_PERMISSIONS) {
+            if (allPermissionsGranted()) {
+                surfaceView.post {
+                    startActivity(Intent(this, MainActivity::class.java))
+                    finish()
+                }
+            } else {
+                Toast.makeText(this,
+                    "권한을 허용해주세요.",
+                    Toast.LENGTH_SHORT).show()
+                finish()
+            }
+        }
+    }
+
+    private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
+        ContextCompat.checkSelfPermission(
+            baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
 
     override fun onAuthSuccessRtmp() = runOnUiThread {
