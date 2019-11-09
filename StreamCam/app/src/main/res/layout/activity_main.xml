@@ -6,21 +6,33 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <TextureView
-        android:id="@+id/viewFinder"
-        android:layout_width="640px"
-        android:layout_height="640px"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <ImageView
-        android:id="@+id/testImage"
-        android:layout_width="250dp"
-        android:layout_height="250dp"
+    <com.pedro.rtplibrary.view.OpenGlView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:id="@+id/surfaceView"
+        app:keepAspectRatio="false"
+        app:AAEnabled="false"
+        app:numFilters="1"
+        app:isFlipHorizontal="false"
+        app:isFlipVertical="false"
+        app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"/>
+        app:layout_constraintDimensionRatio="3:4"
+        />
+
+    <EditText
+        android:id="@+id/url"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/surfaceView"/>
+
+    <Button
+        android:id="@+id/startStop"
+        android:text="시작"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/url"/>
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,84 +1,98 @@
 package com.rebirthlee.streamcam
 
-import android.graphics.Bitmap
-import android.graphics.Matrix
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Size
-import android.view.Surface
-import android.view.TextureView
-import android.view.ViewGroup
-import androidx.camera.core.CameraX
-import androidx.camera.core.Preview
-import androidx.camera.core.PreviewConfig
-import androidx.camera.core.VideoCapture
-import androidx.core.view.drawToBitmap
+import android.view.SurfaceHolder
+import android.view.WindowManager
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import com.pedro.rtplibrary.rtmp.RtmpCamera2
 import kotlinx.android.synthetic.main.activity_main.*
-import java.util.concurrent.Executors
+import net.ossrs.rtmp.ConnectCheckerRtmp
 
-class MainActivity : AppCompatActivity() {
 
-    private val executor = Executors.newSingleThreadExecutor()
+private val tag = MainActivity::class.java.simpleName
 
+class MainActivity : AppCompatActivity(), ConnectCheckerRtmp, SurfaceHolder.Callback {
+
+    private lateinit var rtmpCamera2: RtmpCamera2
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContentView(R.layout.activity_main)
 
-        viewFinder.post { startCamera() }
-        viewFinder.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            updateTransform()
-        }
-    }
-
-    private fun startCamera() {
-
-        // Create configuration object for the viewfinder use case
-        val previewConfig = PreviewConfig.Builder().apply {
-            setTargetResolution(Size(640, 480))
-        }.build()
-
-
-        // Build the viewfinder use case
-        val preview = Preview(previewConfig)
-
-        // Every time the viewfinder is updated, recompute layout
-        preview.setOnPreviewOutputUpdateListener {
-
-            // To update the SurfaceTexture, we have to remove it and re-add it
-            val parent = viewFinder.parent as ViewGroup
-            parent.removeView(viewFinder)
-            parent.addView(viewFinder, 0)
-
-            viewFinder.surfaceTexture = it.surfaceTexture
-            updateTransform()
-//            testImage.setImageBitmap(viewFinder.drawToBitmap(Bitmap.Config.ARGB_8888))
+        rtmpCamera2 = RtmpCamera2(surfaceView, this)
+        surfaceView.holder.addCallback(this)
+        startStop.setOnClickListener {
+            if (rtmpCamera2.isStreaming) {
+                startStop.text = "시작"
+                rtmpCamera2.stopStream()
+            } else if (rtmpCamera2.prepareAudio() && rtmpCamera2.prepareVideo()) {
+                startStop.text = "정지"
+                rtmpCamera2.startStream(url.text?.toString() ?: "rtmp://172.30.1.60/live")
+            }
         }
 
-        // Bind use cases to lifecycle
-        // If Android Studio complains about "this" being not a LifecycleOwner
-        // try rebuilding the project or updating the appcompat dependency to
-        // version 1.1.0 or higher.
-        CameraX.bindToLifecycle(this, preview)
     }
 
-    private fun updateTransform() {
-        val matrix = Matrix()
+    override fun onAuthSuccessRtmp() = runOnUiThread {
+        Toast.makeText(
+            this@MainActivity,
+            "인증 성공.",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
 
-        // Compute the center of the view finder
-        val centerX = viewFinder.width / 2f
-        val centerY = viewFinder.height / 2f
+    override fun onNewBitrateRtmp(bitrate: Long)  = runOnUiThread {
+        Toast.makeText(
+            this@MainActivity,
+            "bitrate. $bitrate.",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
 
-        // Correct preview output to account for display rotation
-        val rotationDegrees = when(viewFinder.display.rotation) {
-            Surface.ROTATION_0 -> 0
-            Surface.ROTATION_90 -> 90
-            Surface.ROTATION_180 -> 180
-            Surface.ROTATION_270 -> 270
-            else -> return
+    override fun onConnectionSuccessRtmp() = runOnUiThread {
+        Toast.makeText(
+            this@MainActivity,
+            "연결 성공.",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    override fun onConnectionFailedRtmp(reason: String?) = runOnUiThread {
+        Toast.makeText(
+            this@MainActivity,
+            "연결 실패. $reason",
+            Toast.LENGTH_SHORT
+        ).show()
+        rtmpCamera2.stopStream()
+    }
+
+    override fun onAuthErrorRtmp() = runOnUiThread {
+        Toast.makeText(
+            this@MainActivity,
+            "인증 실패.",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    override fun onDisconnectRtmp() = runOnUiThread {
+        Toast.makeText(
+            this@MainActivity,
+            "연결 끊김.",
+            Toast.LENGTH_SHORT
+        ).show()
+
+        rtmpCamera2.startPreview()
+    }
+
+
+    override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) = rtmpCamera2.startPreview()
+    override fun surfaceDestroyed(holder: SurfaceHolder?) {
+        if (rtmpCamera2.isStreaming) {
+            rtmpCamera2.stopStream()
         }
-        matrix.postRotate(-rotationDegrees.toFloat(), centerX, centerY)
-
-        // Finally, apply transformations to our TextureView
-        viewFinder.setTransform(matrix)
+        rtmpCamera2.stopPreview()
     }
+
+    override fun surfaceCreated(holder: SurfaceHolder?) = Unit
 }
