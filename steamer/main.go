@@ -17,7 +17,6 @@ import (
 
 var (
 	addr = flag.String("l", ":8089", "host:port of the go-rtmp-server")
-	sKey = flag.String("k", "", "Stream key, to protect your stream")
 )
 
 type writeFlusher struct {
