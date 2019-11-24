@@ -49,24 +49,30 @@ func main() {
 			return
 		}
 
-		key := path[1]
+		key := path[1] // key
 		fmt.Println("request string->", conn.URL.RequestURI())
 		ch := channels[key]
 		if ch == nil {
+			// 채널 생성
 			ch = &Channel{}
 			ch.que = pubsub.NewQueue()
 			ch.que.WriteHeader(streams)
 			channels[key] = ch
 		} else {
+			// 중복 접속 차단
 			ch = nil
 		}
 		l.Unlock()
+
+		// 중복 접속 차단
 		if ch == nil {
 			return
 		}
 
+		// 데이터 큐에 복사
 		avutil.CopyPackets(ch.que, conn)
 
+		// 채널 종료
 		l.Lock()
 		delete(channels, key)
 		l.Unlock()
@@ -80,6 +86,7 @@ func main() {
 			ch := channels[path[1]]
 			l.RUnlock()
 			if ch != nil {
+				//http 헤더 셋팅
 				w.Header().Set("Content-Type", "video/x-flv")
 				w.Header().Set("Transfer-Encoding", "chunked")
 				w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -87,9 +94,11 @@ func main() {
 				flusher := w.(http.Flusher)
 				flusher.Flush()
 
+				// 스트림 구성
 				muxer := flv.NewMuxerWriteFlusher(writeFlusher{httpflusher: flusher, Writer: w})
 				cursor := ch.que.Latest()
 
+				// 아웃 바운드
 				avutil.CopyFile(muxer, cursor)
 			}
 		} else {

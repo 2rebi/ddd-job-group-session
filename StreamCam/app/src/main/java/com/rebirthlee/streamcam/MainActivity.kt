@@ -42,7 +42,6 @@ class MainActivity : AppCompatActivity(), ConnectCheckerRtmp, SurfaceHolder.Call
             ActivityCompat.requestPermissions(
                 this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
         }
-
     }
 
     override fun onRequestPermissionsResult(
